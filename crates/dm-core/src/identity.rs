@@ -1,4 +1,4 @@
-use ed25519_dalek::{SigningKey, VerifyingKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
 use zeroize::ZeroizeOnDrop;
@@ -26,6 +26,10 @@ impl Identity {
 
     pub fn nid_hex(&self) -> String {
         self.nid.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    pub fn sign(&self, message: &[u8]) -> Signature {
+        self.signing_key.sign(message)
     }
 
     fn derive_nid(vk: VerifyingKey) -> [u8; 32] {
