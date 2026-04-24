@@ -1,7 +1,7 @@
 use crate::Identity;
 use ed25519_dalek::Signature;
 use rand::rngs::OsRng;
-use x25519_dalek::{PublicKey, StaticSecret};
+use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 use zeroize::ZeroizeOnDrop;
 
 /// Private X25519 pre-key material held by the local device.
@@ -23,6 +23,7 @@ struct OtpkEntry {
 
 /// The public bundle published to the Relay/Registry for X3DH session initiation.
 pub struct PreKeyBundle {
+    pub ik_dh_pub: [u8; 32],
     pub spk_id: u32,
     pub spk_pub: [u8; 32],
     pub spk_sig: Signature,
@@ -35,7 +36,7 @@ pub struct OtpkPublic {
 }
 
 impl PreKeyStore {
-    /// Generate a signed pre-key and `n_otpks` one-time pre-keys, all signed/anchored
+    /// Generate a signed pre-key and `n_otpks` one-time pre-keys, all anchored
     /// to the given `Identity`.
     pub fn generate(identity: &Identity, n_otpks: u32) -> Self {
         let spk_secret = StaticSecret::random_from_rng(OsRng);
@@ -64,8 +65,9 @@ impl PreKeyStore {
     }
 
     /// Return the public-only view of this store — safe to transmit to the Relay.
-    pub fn bundle(&self) -> PreKeyBundle {
+    pub fn bundle(&self, identity: &Identity) -> PreKeyBundle {
         PreKeyBundle {
+            ik_dh_pub: identity.dh_public_key(),
             spk_id: self.spk_id,
             spk_pub: self.spk_pub,
             spk_sig: Signature::from_bytes(&self.spk_sig),
@@ -80,8 +82,19 @@ impl PreKeyStore {
         }
     }
 
-    pub fn spk_secret(&self) -> &StaticSecret {
-        &self.spk_secret
+    pub fn spk_diffie_hellman(&self, their_public: &PublicKey) -> SharedSecret {
+        self.spk_secret.diffie_hellman(their_public)
+    }
+
+    pub fn opk_diffie_hellman(
+        &self,
+        key_id: u32,
+        their_public: &PublicKey,
+    ) -> Option<SharedSecret> {
+        self.opks
+            .iter()
+            .find(|e| e.key_id == key_id)
+            .map(|e| e.secret.diffie_hellman(their_public))
     }
 }
 
@@ -96,7 +109,7 @@ mod tests {
     fn test_signed_pre_key_signature_is_valid() {
         let identity = Identity::generate();
         let store = PreKeyStore::generate(&identity, 1);
-        let bundle = store.bundle();
+        let bundle = store.bundle(&identity);
         identity
             .verifying_key()
             .verify(&bundle.spk_pub, &bundle.spk_sig.into())
@@ -107,7 +120,8 @@ mod tests {
     fn test_pre_key_bundle_key_sizes_are_32_bytes() {
         let identity = Identity::generate();
         let store = PreKeyStore::generate(&identity, 1);
-        let bundle = store.bundle();
+        let bundle = store.bundle(&identity);
+        assert_eq!(bundle.ik_dh_pub.len(), 32);
         assert_eq!(bundle.spk_pub.len(), 32);
         assert_eq!(bundle.opks[0].pub_key.len(), 32);
     }
@@ -116,7 +130,7 @@ mod tests {
     fn test_one_time_pre_keys_are_unique() {
         let identity = Identity::generate();
         let store = PreKeyStore::generate(&identity, 10);
-        let bundle = store.bundle();
+        let bundle = store.bundle(&identity);
         let unique: HashSet<[u8; 32]> = bundle.opks.iter().map(|k| k.pub_key).collect();
         assert_eq!(unique.len(), 10, "all OPK public keys must be distinct");
     }
@@ -125,7 +139,7 @@ mod tests {
     fn test_pre_key_store_generates_correct_opk_count() {
         let identity = Identity::generate();
         let store = PreKeyStore::generate(&identity, 5);
-        let bundle = store.bundle();
+        let bundle = store.bundle(&identity);
         assert_eq!(bundle.opks.len(), 5);
     }
 
@@ -133,7 +147,7 @@ mod tests {
     fn test_opk_ids_are_sequential_from_one() {
         let identity = Identity::generate();
         let store = PreKeyStore::generate(&identity, 3);
-        let bundle = store.bundle();
+        let bundle = store.bundle(&identity);
         let ids: Vec<u32> = bundle.opks.iter().map(|k| k.key_id).collect();
         assert_eq!(ids, vec![1, 2, 3]);
     }

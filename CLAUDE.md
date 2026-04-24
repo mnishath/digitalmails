@@ -31,7 +31,7 @@ Future crates drop into `crates/` and get added to the workspace `members` list.
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **1 — Cryptographic Core** | Ed25519 keygen, NID hashing (SHA-256), X3DH, Double Ratchet, PSI | Spike 1 ✅, Spike 2 ✅ |
+| **1 — Cryptographic Core** | Ed25519 keygen, NID hashing (SHA-256), X3DH, Double Ratchet, PSI | Spike 1 ✅, Spike 2 ✅, Spike 3 ✅ |
 | **2 — Dumb Relay** | Stateless WebSocket server; blob routing by NID; Continuous Delta sync | Not started |
 | **3 — Aggregator API** | Cross-chain handle resolver (Base Sepolia, etc.) | Not started |
 | **4 — Client UI** | React (WASM) + mobile (UniFFI); Context Pivot: Chat ↔ Triage | Not started |
@@ -93,6 +93,5 @@ cargo test --workspace
 **Done:** `Identity::generate()` — produces an Ed25519 signing key and derives its NID via SHA-256. Five tests cover shape, format, cryptographic correctness, uniqueness, and round-trip hex decoding.
 
 **Next spike candidates:**
-- Spike 3: X3DH key agreement — given Alice's `Identity` + Bob's `PreKeyBundle`, derive a shared secret via X3DH and produce the initial Double Ratchet root key
-- Spike 4: Double Ratchet session — given the X3DH root key, implement send/receive ratchet steps producing per-message keys
+- Spike 4: Double Ratchet session — given the X3DH `SharedSecret` as the root key, implement send/receive KDF ratchet steps that produce unique per-message keys (`ratchet.rs`)
 - Spike 5: Encrypted local store — persist `Identity` + `PreKeyStore` into SQLCipher-encrypted SQLite
