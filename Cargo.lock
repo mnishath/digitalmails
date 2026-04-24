@@ -103,6 +103,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "hkdf",
+ "hmac",
  "rand",
  "sha2",
  "x25519-dalek",

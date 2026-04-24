@@ -31,7 +31,7 @@ Future crates drop into `crates/` and get added to the workspace `members` list.
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **1 — Cryptographic Core** | Ed25519 keygen, NID hashing (SHA-256), X3DH, Double Ratchet, PSI | Spike 1 ✅, Spike 2 ✅, Spike 3 ✅ |
+| **1 — Cryptographic Core** | Ed25519 keygen, NID hashing (SHA-256), X3DH, Double Ratchet, PSI | Spike 1 ✅, Spike 2 ✅, Spike 3 ✅, Spike 4 ✅ |
 | **2 — Dumb Relay** | Stateless WebSocket server; blob routing by NID; Continuous Delta sync | Not started |
 | **3 — Aggregator API** | Cross-chain handle resolver (Base Sepolia, etc.) | Not started |
 | **4 — Client UI** | React (WASM) + mobile (UniFFI); Context Pivot: Chat ↔ Triage | Not started |
@@ -93,5 +93,5 @@ cargo test --workspace
 **Done:** `Identity::generate()` — produces an Ed25519 signing key and derives its NID via SHA-256. Five tests cover shape, format, cryptographic correctness, uniqueness, and round-trip hex decoding.
 
 **Next spike candidates:**
-- Spike 4: Double Ratchet session — given the X3DH `SharedSecret` as the root key, implement send/receive KDF ratchet steps that produce unique per-message keys (`ratchet.rs`)
-- Spike 5: Encrypted local store — persist `Identity` + `PreKeyStore` into SQLCipher-encrypted SQLite
+- Spike 5: Encrypted local store — persist `Identity` + `PreKeyStore` into SQLCipher-encrypted SQLite, unlocked by the user's root key
+- Spike 6: DH Ratchet — extend `RatchetSession` with periodic DH ratchet steps for break-in recovery (adds sender/receiver DH keypairs, header ratchet pub key, and `ratchet_step(their_ratchet_pub)`)
